@@ -25,6 +25,7 @@ func FetchAndStore(db *sqlite.DB, client *http.Client, data <-chan Element, work
 	var wg sync.WaitGroup
 
 	fetchChan := make(chan Element, workers)
+	logger.Debug("starting FetchAndStore")
 
 	for range workers {
 		wg.Add(1)
@@ -49,10 +50,12 @@ func processItem(db *sqlite.DB, client *http.Client, item Element, logger *slog.
 	var wg sync.WaitGroup
 	resultChan := make(chan *dbmodel.CVE, len(item.URLS))
 
+	logger.Debug("processItem", "CVEID", item.CVEID)
+
 	for _, url := range item.URLS {
 		wg.Add(1)
 
-		go func(url string) {
+		go func() {
 			defer wg.Done()
 
 			crawled, err := isCrawled(db.DB, item.CVEID, url)
@@ -68,24 +71,12 @@ func processItem(db *sqlite.DB, client *http.Client, item Element, logger *slog.
 				return
 			}
 
+			possibleWaybackURL := ""
 			fetchResult, err := fetchURL(client, url, logger)
 			if err != nil {
 				waybackURL, errr := wayback.Fetch(client, url)
 				if errr != nil {
 					logger.Error("wayback.Fetch", "err", err, "url", url)
-
-					return
-				}
-
-				crawled, err = isCrawled(db.DB, item.CVEID, waybackURL)
-				if err != nil {
-					logger.Error("isCrawled-waybackURL", "err", err, "url", waybackURL)
-
-					return
-				}
-
-				if crawled {
-					logger.Info("already crawled, skipping waybackURL", "url", waybackURL)
 
 					return
 				}
@@ -97,7 +88,7 @@ func processItem(db *sqlite.DB, client *http.Client, item Element, logger *slog.
 					return
 				}
 
-				url = waybackURL
+				possibleWaybackURL = waybackURL
 			}
 
 			jsRequired := fetchResult.Body == "" || strings.Contains(strings.ToLower(fetchResult.Body), "<noscript>")
@@ -106,13 +97,14 @@ func processItem(db *sqlite.DB, client *http.Client, item Element, logger *slog.
 			resultChan <- &dbmodel.CVE{
 				CVEID:      item.CVEID,
 				URL:        url,
+				WaybackURL: possibleWaybackURL,
 				HTML:       fetchResult.Body,
 				JSRequired: jsRequired,
 				Completed:  completed,
 				StatusCode: fetchResult.StatusCode,
 				Headers:    fetchResult.Headers,
 			}
-		}(url)
+		}()
 	}
 
 	go func() {

@@ -25,6 +25,7 @@ type FilterFunc func(<-chan Element) <-chan Element
 // ReadDataset reads dataset json file.
 func ReadDataset(r io.Reader, logger *slog.Logger) chan Element {
 	out := make(chan Element)
+	logger.Debug("reading dataset")
 
 	go func() {
 		defer close(out)

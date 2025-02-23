@@ -18,16 +18,16 @@ import (
 )
 
 const (
-	defaultShowVersion  = false
-	defaultDatasetFile  = "dataset.json"
-	defaultLogLevel     = "info"
-	defaultLogColorized = true
+	defaultShowVersion = false
+	defaultDatasetFile = "dataset.json"
+	defaultLogLevel    = "debug"
+	defaultLogNoColor  = false
 )
 
 func main() {
 	vrs := flag.Bool("version", defaultShowVersion, "display version information")
 	logLevel := flag.String("loglevel", defaultLogLevel, "log level")
-	logColorized := flag.Bool("logcolorized", defaultLogColorized, "log colorized")
+	logNoColor := flag.Bool("lognocolor", defaultLogNoColor, "disable log colors")
 	dataset := flag.String("dataset", defaultDatasetFile, "dataset json filename")
 	workers := flag.Int("workers", runtime.NumCPU(), "number of concurrent workers")
 	flag.Parse()
@@ -37,7 +37,7 @@ func main() {
 		return
 	}
 
-	logger := tlog.New(*logLevel, *logColorized)
+	logger := tlog.New(*logLevel, *logNoColor)
 
 	f, err := os.Open(*dataset)
 	if err != nil {

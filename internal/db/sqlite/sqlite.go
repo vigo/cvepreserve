@@ -43,6 +43,7 @@ func (d *DB) InitDB() error {
 		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 		cve_id TEXT,
 		url TEXT UNIQUE,
+		wayback_url TEXT,
 		html TEXT,
 		js_required INTEGER DEFAULT 0,
 		completed INTEGER DEFAULT 0,
@@ -63,9 +64,10 @@ func (d *DB) Save(model *dbmodel.CVE) error {
 	}
 
 	_, err = d.DB.Exec(
-		"INSERT OR IGNORE INTO cve_pages (created_at, cve_id, url, html, js_required, completed, status_code, headers) VALUES (CURRENT_TIMESTAMP, ?, ?, ?, ?, ?, ?, ?)",
+		"INSERT OR IGNORE INTO cve_pages (created_at, cve_id, url, wayback_url, html, js_required, completed, status_code, headers) VALUES (CURRENT_TIMESTAMP, ?, ?, ?, ?, ?, ?, ?, ?)",
 		model.CVEID,
 		model.URL,
+		model.WaybackURL,
 		model.HTML,
 		model.JSRequired,
 		model.Completed,

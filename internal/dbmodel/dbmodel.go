@@ -10,6 +10,7 @@ type CVE struct {
 	Headers    http.Header
 	CVEID      string
 	URL        string
+	WaybackURL string
 	HTML       string
 	StatusCode int
 	JSRequired bool
