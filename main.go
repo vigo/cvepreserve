@@ -62,7 +62,7 @@ func main() {
 		return
 	}
 
-	client, err := httpclient.New()
+	hclient, err := httpclient.New()
 	if err != nil {
 		logger.Error("instantiate http client", "err", err)
 		return
@@ -76,6 +76,6 @@ func main() {
 
 	filteredData := cve.FanIn(filtered...)
 
-	cve.FetchAndStore(db, client.HTTPClient, filteredData, *workers, logger)
+	cve.FetchAndStore(db, hclient.HTTPClient, filteredData, *workers, logger)
 	renderer.RenderRequiredPages(db, *workers, logger)
 }

@@ -7,6 +7,8 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+
+	"github.com/vigo/cvepreserve/internal/httpclient"
 )
 
 // Response represents Wayback response.
@@ -29,8 +31,14 @@ var (
 )
 
 // Fetch queries Wayback Machine for an archived version of a URL.
-func Fetch(client *http.Client, url string) (string, error) {
-	resp, err := client.Get(waybackEndpoint + url)
+func Fetch(cl httpclient.Doer, url string) (string, error) {
+	req, err := http.NewRequest(http.MethodGet, waybackEndpoint+url, nil)
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("User-Agent", httpclient.UserAgent)
+
+	resp, err := cl.Do(req)
 	if err != nil {
 		return "", err
 	}
