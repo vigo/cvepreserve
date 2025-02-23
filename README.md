@@ -5,8 +5,7 @@
 # CVE Preserve
 
 Few days ago, (*Feb 22, 2025*) [Mehmet][01] [asked][02] for contribution to his
-project. I tried to implement a proof of concept version, it kinda looks
-working.
+project. I implemented a proof-of-concept version, and it seems to be working.
 
 Parent project can be found:
 
