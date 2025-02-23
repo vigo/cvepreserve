@@ -1,6 +1,6 @@
 ![Version](https://img.shields.io/badge/version-0.0.0-orange.svg)
 [![Documentation](https://godoc.org/github.com/vigo/cvepreserve?status.svg)](https://pkg.go.dev/github.com/vigo/cvepreserve)
-
+[![Run golangci-lint](https://github.com/vigo/cvepreserve/actions/workflows/go-lint.yml/badge.svg)](https://github.com/vigo/cvepreserve/actions/workflows/go-lint.yml)
 
 # CVE Preserve
 

@@ -4,6 +4,7 @@ Package httpclient implements http client.
 package httpclient
 
 import (
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"net/http"
@@ -116,6 +117,7 @@ func New(options ...Option) (*Client, error) {
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	transport.MaxIdleConns = client.MaxIdleConns
 	transport.IdleConnTimeout = client.IdleConnTimeout
+	transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true} //nolint
 
 	cl := &http.Client{
 		Transport: transport,

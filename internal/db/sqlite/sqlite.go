@@ -17,7 +17,8 @@ var _ DBManager = (*DB)(nil) // compile time proof
 
 // sentinel errors.
 var (
-	ErrValueRequired = errors.New("value required")
+	ErrValueRequired  = errors.New("value required")
+	ErrNoRowsAffected = errors.New("no row(s) affected")
 )
 
 // DBManager defines database behaviours.
@@ -103,8 +104,17 @@ func (d *DB) FindPagesNeedingRender() (dbmodel.RenderRequiredCVES, error) {
 
 // UpdateRenderedHTML updates the HTML field after rendering.
 func (d *DB) UpdateRenderedHTML(id int, html string) error {
-	_, err := d.DB.Exec("UPDATE cve_pages SET html = ? WHERE id = ?", html, id)
-	return err
+	result, err := d.DB.Exec("UPDATE cve_pages SET html = ? WHERE id = ?", html, id)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		return ErrNoRowsAffected
+	}
+
+	return nil
 }
 
 // IsCompleted checks if page is already rendered.
@@ -124,8 +134,17 @@ func (d *DB) IsCompleted(id int, url string) (bool, error) {
 
 // MarkCompleted marks as page render completed.
 func (d *DB) MarkCompleted(id int) error {
-	_, err := d.DB.Exec("UPDATE cve_pages SET completed = 1 WHERE id = ?", id)
-	return err
+	result, err := d.DB.Exec("UPDATE cve_pages SET completed = 1 WHERE id = ?", id)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		return ErrNoRowsAffected
+	}
+
+	return nil
 }
 
 func (d *DB) setDefaults() {

@@ -5,6 +5,7 @@ package renderer
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"sync"
 	"time"
@@ -14,7 +15,10 @@ import (
 	"github.com/vigo/cvepreserve/internal/dbmodel"
 )
 
-const waitTime = 3 * time.Second
+const (
+	waitTime      = 3 * time.Second
+	chromeTimeout = 10 * time.Second
+)
 
 // RenderRequiredPages finds and renders pages requiring JavaScript execution.
 func RenderRequiredPages(db *sqlite.DB, workers int, logger *slog.Logger) {
@@ -31,10 +35,20 @@ func RenderRequiredPages(db *sqlite.DB, workers int, logger *slog.Logger) {
 
 	logger.Info("found", "page(s)", len(pages))
 
-	opts := append(chromedp.DefaultExecAllocatorOptions[:],
+	opts := append(
+		chromedp.DefaultExecAllocatorOptions[:],
 		chromedp.Flag("headless", true),
 		chromedp.Flag("disable-gpu", true),
 		chromedp.Flag("no-sandbox", true),
+		chromedp.Flag("disable-http2", true),
+		chromedp.Flag("disable-popup-blocking", true),
+		chromedp.Flag("disable-site-isolation-trials", true),
+		chromedp.Flag("enable-automation", false),
+		chromedp.Flag("disable-blink-features", "AutomationControlled"),
+		chromedp.Flag("enable-features", "NetworkService,NetworkServiceInProcess"),
+		chromedp.UserAgent(
+			"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+		),
 	)
 
 	allocatorCtx, cancelAllocator := chromedp.NewExecAllocator(context.Background(), opts...)
@@ -72,7 +86,9 @@ func RenderRequiredPages(db *sqlite.DB, workers int, logger *slog.Logger) {
 				if errr != nil {
 					logger.Error("renderPage", "err", errr, "url", job.URL, "worker", i)
 
-					continue
+					if !errors.Is(errr, context.DeadlineExceeded) {
+						continue
+					}
 				}
 
 				errr = db.UpdateRenderedHTML(job.ID, html)
@@ -101,23 +117,38 @@ func renderPage(parentCtx context.Context, url string, logger *slog.Logger) (str
 	ctx, cancel := chromedp.NewContext(parentCtx)
 	defer cancel()
 
+	timeoutCtx, timeoutCancel := context.WithTimeout(ctx, chromeTimeout)
+	defer timeoutCancel()
+
 	var html string
 
 	logger.Debug("navigating to", "url", url)
 
-	if err := chromedp.Run(ctx,
-		chromedp.Navigate(url),
-		chromedp.Sleep(waitTime),
-		chromedp.OuterHTML("html", &html),
-	); err != nil {
-		logger.Error("renderPage", "err", err, "url", url)
+	done := make(chan struct{})
+	errChan := make(chan error, 1)
 
-		return "", err
+	go func() {
+		err := chromedp.Run(
+			timeoutCtx,
+			chromedp.Navigate(url),
+			chromedp.WaitReady("body", chromedp.ByQuery),
+			chromedp.Sleep(waitTime),
+			chromedp.OuterHTML("html", &html),
+		)
+		errChan <- err
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		err := <-errChan
+		if html == "" {
+			logger.Warn("empty html received", "url", url, "err", err)
+		}
+		return html, err
+	case <-timeoutCtx.Done():
+		err := <-errChan
+		logger.Warn("chrome render timeouts", "url", url, "err", err, "html size", len(html))
+		return html, err
 	}
-
-	if html == "" {
-		logger.Warn("empty html received", "url", url)
-	}
-
-	return html, nil
 }
