@@ -10,6 +10,7 @@ import (
 
 	"github.com/vigo/cvepreserve/internal/db/sqlite"
 	"github.com/vigo/cvepreserve/internal/dbmodel"
+	"github.com/vigo/cvepreserve/internal/httpclient"
 	"github.com/vigo/cvepreserve/internal/wayback"
 )
 
@@ -21,7 +22,7 @@ type FetchResult struct {
 }
 
 // FetchAndStore fetches URLs and saves them in the database concurrently.
-func FetchAndStore(db *sqlite.DB, client *http.Client, data <-chan Element, workers int, logger *slog.Logger) {
+func FetchAndStore(db *sqlite.DB, cl httpclient.Doer, data <-chan Element, workers int, logger *slog.Logger) {
 	var wg sync.WaitGroup
 
 	fetchChan := make(chan Element, workers)
@@ -34,7 +35,7 @@ func FetchAndStore(db *sqlite.DB, client *http.Client, data <-chan Element, work
 			defer wg.Done()
 
 			for item := range fetchChan {
-				processItem(db, client, item, logger)
+				processItem(db, cl, item, logger)
 			}
 		}()
 	}
@@ -46,7 +47,7 @@ func FetchAndStore(db *sqlite.DB, client *http.Client, data <-chan Element, work
 	wg.Wait()
 }
 
-func processItem(db *sqlite.DB, client *http.Client, item Element, logger *slog.Logger) {
+func processItem(db *sqlite.DB, cl httpclient.Doer, item Element, logger *slog.Logger) {
 	var wg sync.WaitGroup
 	resultChan := make(chan *dbmodel.CVE, len(item.URLS))
 
@@ -72,16 +73,16 @@ func processItem(db *sqlite.DB, client *http.Client, item Element, logger *slog.
 			}
 
 			possibleWaybackURL := ""
-			fetchResult, err := fetchURL(client, url, logger)
+			fetchResult, err := fetchURL(cl, url, logger)
 			if err != nil {
-				waybackURL, errr := wayback.Fetch(client, url)
+				waybackURL, errr := wayback.Fetch(cl, url)
 				if errr != nil {
 					logger.Error("wayback.Fetch", "err", err, "url", url)
 
 					return
 				}
 
-				fetchResult, err = fetchURL(client, waybackURL, logger)
+				fetchResult, err = fetchURL(cl, waybackURL, logger)
 				if err != nil {
 					logger.Error("fetchURL wayback", "err", err, "url", waybackURL)
 
@@ -119,18 +120,15 @@ func processItem(db *sqlite.DB, client *http.Client, item Element, logger *slog.
 	}
 }
 
-func fetchURL(client *http.Client, url string, logger *slog.Logger) (*FetchResult, error) {
+func fetchURL(cl httpclient.Doer, url string, logger *slog.Logger) (*FetchResult, error) {
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	req.Header.Set(
-		"User-Agent",
-		"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
-	)
+	req.Header.Set("User-Agent", httpclient.UserAgent)
 
-	resp, err := client.Do(req)
+	resp, err := cl.Do(req)
 	if err != nil {
 		return nil, err
 	}

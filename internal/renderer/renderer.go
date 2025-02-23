@@ -13,6 +13,7 @@ import (
 	"github.com/chromedp/chromedp"
 	"github.com/vigo/cvepreserve/internal/db/sqlite"
 	"github.com/vigo/cvepreserve/internal/dbmodel"
+	"github.com/vigo/cvepreserve/internal/httpclient"
 )
 
 const (
@@ -46,9 +47,7 @@ func RenderRequiredPages(db *sqlite.DB, workers int, logger *slog.Logger) {
 		chromedp.Flag("enable-automation", false),
 		chromedp.Flag("disable-blink-features", "AutomationControlled"),
 		chromedp.Flag("enable-features", "NetworkService,NetworkServiceInProcess"),
-		chromedp.UserAgent(
-			"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
-		),
+		chromedp.UserAgent(httpclient.UserAgent),
 	)
 
 	allocatorCtx, cancelAllocator := chromedp.NewExecAllocator(context.Background(), opts...)
