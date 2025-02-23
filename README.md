@@ -17,19 +17,17 @@ If you have go installation (*1.24*) on your machine:
 
 ```bash
 go install github.com/vigo/cvepreserve@latest
-
-cvepreserve -h
 ```
 
-or build from source:
+then run `cvepreserve -h` for help or build from source:
 
 ```bash
 git clone git@github.com:vigo/cvepreserve.git
 cd cvepreserve/
 go build .
-
-./cvepreserve -h
 ```
+
+then run `./cvepreserve -h` for help.
 
 ## Usage
 
