@@ -46,7 +46,7 @@ func RenderRequiredPages(db *sqlite.DB, workers int, logger *slog.Logger) {
 	renderChan := make(chan dbmodel.RenderRequiredCVE, len(pages))
 
 	var wg sync.WaitGroup
-	for range workers {
+	for i := range workers {
 		wg.Add(1)
 
 		go func() {
@@ -55,13 +55,13 @@ func RenderRequiredPages(db *sqlite.DB, workers int, logger *slog.Logger) {
 			for job := range renderChan {
 				completed, errr := db.IsCompleted(job.ID, job.URL)
 				if errr != nil {
-					logger.Error("db.IsCompleted", "err", errr, "ID", job.ID, "url", job.URL)
+					logger.Error("db.IsCompleted", "err", errr, "ID", job.ID, "url", job.URL, "worker", i)
 
 					continue
 				}
 
 				if completed {
-					logger.Info("completed", "ID", job.ID, "url", job.URL)
+					logger.Info("completed", "ID", job.ID, "url", job.URL, "worker", i)
 
 					continue
 				}
@@ -70,20 +70,20 @@ func RenderRequiredPages(db *sqlite.DB, workers int, logger *slog.Logger) {
 
 				html, errr := renderPage(browserCtx, job.URL, logger)
 				if errr != nil {
-					logger.Error("renderPage", "err", errr, "url", job.URL)
+					logger.Error("renderPage", "err", errr, "url", job.URL, "worker", i)
 
 					continue
 				}
 
 				errr = db.UpdateRenderedHTML(job.ID, html)
 				if errr != nil {
-					logger.Error("UpdateRenderedHTML", "err", errr, "ID", job.ID, "url", job.URL)
+					logger.Error("UpdateRenderedHTML", "err", errr, "ID", job.ID, "url", job.URL, "worker", i)
 
 					continue
 				}
 
 				if errrr := db.MarkCompleted(job.ID); errrr != nil {
-					logger.Error("db.MarkCompleted", "err", errrr, "ID", job.ID, "url", job.URL)
+					logger.Error("db.MarkCompleted", "err", errrr, "ID", job.ID, "url", job.URL, "worker", i)
 				}
 			}
 		}()
