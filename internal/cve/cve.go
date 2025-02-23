@@ -5,11 +5,9 @@ package cve
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
+	"log/slog"
 	"sync"
-
-	"github.com/vigo/cvepreserve/internal/colorz"
 )
 
 // Element represents CVE item.
@@ -25,7 +23,7 @@ type Elements []Element
 type FilterFunc func(<-chan Element) <-chan Element
 
 // ReadDataset reads dataset json file.
-func ReadDataset(r io.Reader) chan Element {
+func ReadDataset(r io.Reader, logger *slog.Logger) chan Element {
 	out := make(chan Element)
 
 	go func() {
@@ -33,14 +31,14 @@ func ReadDataset(r io.Reader) chan Element {
 
 		decoder := json.NewDecoder(r)
 		if _, err := decoder.Token(); err != nil {
-			fmt.Println(colorz.Red+"[error][decoder-token]", err, colorz.Reset)
+			logger.Error("decoder token", "err", err)
 			return
 		}
 
 		for decoder.More() {
 			var element Element
 			if err := decoder.Decode(&element); err != nil {
-				fmt.Println(colorz.Red+"[error][decoder-decode]", err, colorz.Reset)
+				logger.Error("decoder decode", "err", err)
 				return
 			}
 

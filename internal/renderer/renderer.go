@@ -5,12 +5,11 @@ package renderer
 
 import (
 	"context"
-	"fmt"
+	"log/slog"
 	"sync"
 	"time"
 
 	"github.com/chromedp/chromedp"
-	"github.com/vigo/cvepreserve/internal/colorz"
 	"github.com/vigo/cvepreserve/internal/db/sqlite"
 	"github.com/vigo/cvepreserve/internal/dbmodel"
 )
@@ -18,19 +17,19 @@ import (
 const waitTime = 3 * time.Second
 
 // RenderRequiredPages finds and renders pages requiring JavaScript execution.
-func RenderRequiredPages(db *sqlite.DB, workers int) {
+func RenderRequiredPages(db *sqlite.DB, workers int, logger *slog.Logger) {
 	pages, err := db.FindPagesNeedingRender()
 	if err != nil {
-		fmt.Println(colorz.Red+"[error][db.FindPagesNeedingRender]", err, colorz.Reset)
+		logger.Error("db.FindPagesNeedingRender", "err", err)
 		return
 	}
 
 	if len(pages) == 0 {
-		fmt.Println(colorz.White+"[info] no pages need rendering", colorz.Reset)
+		logger.Info("no pages need rendering")
 		return
 	}
 
-	fmt.Printf(colorz.White+"[info] found %d pages for rendering: %v\n"+colorz.Reset, len(pages), pages)
+	logger.Info("found", "page(s)", len(pages))
 
 	renderChan := make(chan dbmodel.RenderRequiredCVE, len(pages))
 
@@ -44,35 +43,35 @@ func RenderRequiredPages(db *sqlite.DB, workers int) {
 			for job := range renderChan {
 				completed, errr := db.IsCompleted(job.ID, job.URL)
 				if errr != nil {
-					fmt.Println(colorz.Red+"[error][db.IsCompleted]", errr, job.ID, job.URL, colorz.Reset)
+					logger.Error("db.IsCompleted", "err", errr, "ID", job.ID, "url", job.URL)
 
 					continue
 				}
 
 				if completed {
-					fmt.Println(colorz.White+"[info][completed]", job.ID, job.URL, colorz.Reset)
+					logger.Info("completed", "ID", job.ID, "url", job.URL)
 
 					continue
 				}
 
-				fmt.Println(colorz.White+"[info][render]", job.URL, colorz.Reset)
+				logger.Info("render", "url", job.URL)
 
-				html, errr := renderPage(job.URL)
+				html, errr := renderPage(job.URL, logger)
 				if errr != nil {
-					fmt.Println(colorz.Red+"[error][renderPage]", errr, job.URL, colorz.Reset)
+					logger.Error("renderPage", "err", errr, "url", job.URL)
 
 					continue
 				}
 
 				errr = db.UpdateRenderedHTML(job.ID, html)
 				if errr != nil {
-					fmt.Println(colorz.Red+"[error][UpdateRenderedHTML]", errr, job.ID, job.URL, colorz.Reset)
+					logger.Error("UpdateRenderedHTML", "err", errr, "ID", job.ID, "url", job.URL)
 
 					continue
 				}
 
 				if errrr := db.MarkCompleted(job.ID); errrr != nil {
-					fmt.Println(colorz.Red+"[error][db.MarkCompleted]", errrr, job.ID, job.URL, colorz.Reset)
+					logger.Error("db.MarkCompleted", "err", errrr, "ID", job.ID, "url", job.URL)
 				}
 			}
 		}()
@@ -86,26 +85,26 @@ func RenderRequiredPages(db *sqlite.DB, workers int) {
 	wg.Wait()
 }
 
-func renderPage(url string) (string, error) {
+func renderPage(url string, logger *slog.Logger) (string, error) {
 	ctx, cancel := chromedp.NewContext(context.Background())
 	defer cancel()
 
 	var html string
 
-	fmt.Println(colorz.Yellow+"[debug] navigating to:", url, colorz.Reset)
+	logger.Debug("navigating to", "url", url)
 
 	if err := chromedp.Run(ctx,
 		chromedp.Navigate(url),
 		chromedp.Sleep(waitTime),
 		chromedp.OuterHTML("html", &html),
 	); err != nil {
-		fmt.Println(colorz.Red+"[error][renderPage]", err, url, colorz.Reset)
+		logger.Error("renderPage", "err", err, "url", url)
 
 		return "", err
 	}
 
 	if html == "" {
-		fmt.Println(colorz.White+"[info][empty-html]", url, colorz.Reset)
+		logger.Warn("empty html received", "url", url)
 	}
 
 	return html, nil

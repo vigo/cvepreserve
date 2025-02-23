@@ -9,21 +9,25 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/vigo/cvepreserve/internal/colorz"
 	"github.com/vigo/cvepreserve/internal/cve"
 	"github.com/vigo/cvepreserve/internal/db/sqlite"
 	"github.com/vigo/cvepreserve/internal/httpclient"
 	"github.com/vigo/cvepreserve/internal/renderer"
+	"github.com/vigo/cvepreserve/internal/tlog"
 	"github.com/vigo/cvepreserve/internal/version"
 )
 
 const (
-	defaultShowVersion = false
-	defaultDatasetFile = "dataset.json"
+	defaultShowVersion  = false
+	defaultDatasetFile  = "dataset.json"
+	defaultLogLevel     = "info"
+	defaultLogColorized = true
 )
 
 func main() {
 	vrs := flag.Bool("version", defaultShowVersion, "display version information")
+	logLevel := flag.String("loglevel", defaultLogLevel, "log level")
+	logColorized := flag.Bool("logcolorized", defaultLogColorized, "log colorized")
 	dataset := flag.String("dataset", defaultDatasetFile, "dataset json filename")
 	workers := flag.Int("workers", runtime.NumCPU(), "number of concurrent workers")
 	flag.Parse()
@@ -33,9 +37,11 @@ func main() {
 		return
 	}
 
+	logger := tlog.New(*logLevel, *logColorized)
+
 	f, err := os.Open(*dataset)
 	if err != nil {
-		fmt.Println(colorz.Red+"[error][dataset-open]", err, colorz.Reset)
+		logger.Error("dataset open", "err", err)
 		return
 	}
 
@@ -43,7 +49,7 @@ func main() {
 		sqlite.WithTargetSqliteFilename("result.sqlite3"),
 	)
 	if err != nil {
-		fmt.Println(colorz.Red+"[error][db]", err, colorz.Reset)
+		logger.Error("instantiate db", "err", err)
 		return
 	}
 
@@ -52,17 +58,17 @@ func main() {
 	}()
 
 	if err = db.InitDB(); err != nil {
-		fmt.Println(colorz.Red+"[error][db.InitDB]", err, colorz.Reset)
+		logger.Error("init db", "err", err)
 		return
 	}
 
 	client, err := httpclient.New()
 	if err != nil {
-		fmt.Println(colorz.Red+"[error][httpclient.New]", err, colorz.Reset)
+		logger.Error("instantiate http client", "err", err)
 		return
 	}
 
-	data := cve.ReadDataset(f)
+	data := cve.ReadDataset(f, logger)
 	filtered := make([]<-chan cve.Element, *workers)
 	for i := range *workers {
 		filtered[i] = cve.FilterEmptyURLS(data)
@@ -70,6 +76,6 @@ func main() {
 
 	filteredData := cve.FanIn(filtered...)
 
-	cve.FetchAndStore(db, client.HTTPClient, filteredData, *workers)
-	renderer.RenderRequiredPages(db, *workers)
+	cve.FetchAndStore(db, client.HTTPClient, filteredData, *workers, logger)
+	renderer.RenderRequiredPages(db, *workers, logger)
 }

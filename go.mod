@@ -4,6 +4,7 @@ go 1.24.0
 
 require (
 	github.com/chromedp/chromedp v0.13.0
+	github.com/lmittmann/tint v1.0.7
 	github.com/mattn/go-sqlite3 v1.14.24
 )
 

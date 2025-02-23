@@ -16,7 +16,7 @@ var _ Doer = (*Client)(nil) // compile time proof
 const (
 	DefaultMaxIdleConns    = 10
 	DefaultIdleConnTimeout = 10 * time.Second
-	DefaultTimeout         = 10 * time.Second
+	DefaultTimeout         = 60 * time.Second
 
 	MaxIdleConnsMax    = 100
 	IdleConnTimeoutMax = 60 * time.Second
