@@ -40,7 +40,29 @@ Download dataset file to you local, `~100MB` json file.
 curl -L -o dataset.json https://raw.githubusercontent.com/mdisec/cve-url-crawling-dataset/main/dataset.json
 ```
 
-@wip
+Run the executable:
+
+```bash
+./cvepreserve          # if you are building from source, auto reads from dataset.json
+
+# or
+cvepreserve -dataset "/path/to/dataset.json"
+```
+
+The result database will be saved in the directory where you run the executable.
+Sqlite database name is `result.sqlite3`
+
+---
+
+## Contribute
+
+Feel free to fix bugs, improve, add features! All PR’s are welcome!
+
+1. `fork` (https://github.com/vigo/cvepreserve/fork)
+1. Create your `branch` (`git checkout -b my-feature`)
+1. `commit` yours (`git commit -am 'add some functionality'`)
+1. `push` your `branch` (`git push origin my-feature`)
+1. Than create a new **Pull Request**!
 
 ---
 

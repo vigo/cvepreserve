@@ -31,6 +31,18 @@ func RenderRequiredPages(db *sqlite.DB, workers int, logger *slog.Logger) {
 
 	logger.Info("found", "page(s)", len(pages))
 
+	opts := append(chromedp.DefaultExecAllocatorOptions[:],
+		chromedp.Flag("headless", true),
+		chromedp.Flag("disable-gpu", true),
+		chromedp.Flag("no-sandbox", true),
+	)
+
+	allocatorCtx, cancelAllocator := chromedp.NewExecAllocator(context.Background(), opts...)
+	defer cancelAllocator()
+
+	browserCtx, cancelBrowser := chromedp.NewContext(allocatorCtx)
+	defer cancelBrowser()
+
 	renderChan := make(chan dbmodel.RenderRequiredCVE, len(pages))
 
 	var wg sync.WaitGroup
@@ -56,7 +68,7 @@ func RenderRequiredPages(db *sqlite.DB, workers int, logger *slog.Logger) {
 
 				logger.Info("render", "url", job.URL)
 
-				html, errr := renderPage(job.URL, logger)
+				html, errr := renderPage(browserCtx, job.URL, logger)
 				if errr != nil {
 					logger.Error("renderPage", "err", errr, "url", job.URL)
 
@@ -85,8 +97,8 @@ func RenderRequiredPages(db *sqlite.DB, workers int, logger *slog.Logger) {
 	wg.Wait()
 }
 
-func renderPage(url string, logger *slog.Logger) (string, error) {
-	ctx, cancel := chromedp.NewContext(context.Background())
+func renderPage(parentCtx context.Context, url string, logger *slog.Logger) (string, error) {
+	ctx, cancel := chromedp.NewContext(parentCtx)
 	defer cancel()
 
 	var html string
