@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/chromedp/chromedp"
-	"github.com/vigo/cvepreserve/internal/db/sqlite"
+	"github.com/vigo/cvepreserve/internal/db"
 	"github.com/vigo/cvepreserve/internal/dbmodel"
 	"github.com/vigo/cvepreserve/internal/httpclient"
 )
@@ -22,10 +22,10 @@ const (
 )
 
 // RenderRequiredPages finds and renders pages requiring JavaScript execution.
-func RenderRequiredPages(db *sqlite.DB, workers int, logger *slog.Logger) {
-	pages, err := db.FindPagesNeedingRender()
+func RenderRequiredPages(dbase db.Manager, workers int, logger *slog.Logger) {
+	pages, err := dbase.FindPagesNeedingRender()
 	if err != nil {
-		logger.Error("db.FindPagesNeedingRender", "err", err)
+		logger.Error("FindPagesNeedingRender", "err", err)
 		return
 	}
 
@@ -66,9 +66,9 @@ func RenderRequiredPages(db *sqlite.DB, workers int, logger *slog.Logger) {
 			defer wg.Done()
 
 			for job := range renderChan {
-				completed, errr := db.IsCompleted(job.ID, job.URL)
+				completed, errr := dbase.IsCompleted(job.ID, job.URL)
 				if errr != nil {
-					logger.Error("db.IsCompleted", "err", errr, "ID", job.ID, "url", job.URL, "worker", i)
+					logger.Error("IsCompleted", "err", errr, "ID", job.ID, "url", job.URL, "worker", i)
 
 					continue
 				}
@@ -90,14 +90,14 @@ func RenderRequiredPages(db *sqlite.DB, workers int, logger *slog.Logger) {
 					}
 				}
 
-				errr = db.UpdateRenderedHTML(job.ID, html)
+				errr = dbase.UpdateRenderedHTML(job.ID, html)
 				if errr != nil {
 					logger.Error("UpdateRenderedHTML", "err", errr, "ID", job.ID, "url", job.URL, "worker", i)
 
 					continue
 				}
 
-				if errrr := db.MarkCompleted(job.ID); errrr != nil {
+				if errrr := dbase.MarkCompleted(job.ID); errrr != nil {
 					logger.Error("db.MarkCompleted", "err", errrr, "ID", job.ID, "url", job.URL, "worker", i)
 				}
 			}

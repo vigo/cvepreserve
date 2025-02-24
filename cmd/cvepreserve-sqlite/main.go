@@ -45,7 +45,7 @@ func main() {
 		return
 	}
 
-	db, err := sqlite.New(
+	dbase, err := sqlite.New(
 		sqlite.WithTargetSqliteFilename("result.sqlite3"),
 	)
 	if err != nil {
@@ -54,10 +54,10 @@ func main() {
 	}
 
 	defer func() {
-		_ = db.DB.Close()
+		_ = dbase.DB.Close()
 	}()
 
-	if err = db.InitDB(); err != nil {
+	if err = dbase.InitDB(); err != nil {
 		logger.Error("init db", "err", err)
 		return
 	}
@@ -76,6 +76,6 @@ func main() {
 
 	filteredData := cve.FanIn(filtered...)
 
-	cve.FetchAndStore(db, hclient.HTTPClient, filteredData, *workers, logger)
-	renderer.RenderRequiredPages(db, *workers, logger)
+	cve.FetchAndStore(dbase, hclient.HTTPClient, filteredData, *workers, logger)
+	renderer.RenderRequiredPages(dbase, *workers, logger)
 }

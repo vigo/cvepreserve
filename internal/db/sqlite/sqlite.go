@@ -10,26 +10,17 @@ import (
 	"fmt"
 
 	_ "github.com/mattn/go-sqlite3" // sqlite embedded
+	"github.com/vigo/cvepreserve/internal/db"
 	"github.com/vigo/cvepreserve/internal/dbmodel"
 )
 
-var _ DBManager = (*DB)(nil) // compile time proof
+var _ db.Manager = (*DB)(nil) // compile time proof
 
 // sentinel errors.
 var (
 	ErrValueRequired  = errors.New("value required")
 	ErrNoRowsAffected = errors.New("no row(s) affected")
 )
-
-// DBManager defines database behaviours.
-type DBManager interface {
-	InitDB() error
-	Save(model *dbmodel.CVE) error
-	FindPagesNeedingRender() (dbmodel.RenderRequiredCVES, error)
-	UpdateRenderedHTML(id int, html string) error
-	IsCompleted(id int, url string) (bool, error)
-	MarkCompleted(id int) error
-}
 
 // DB holds sqlite related params.
 type DB struct {
@@ -55,6 +46,11 @@ func (d *DB) InitDB() error {
 	_, err := d.DB.Exec(query)
 
 	return err
+}
+
+// GetDB returns sql.DB.
+func (d *DB) GetDB() *sql.DB {
+	return d.DB
 }
 
 // Save inserts data to db.

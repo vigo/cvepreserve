@@ -11,23 +11,23 @@ Parent project can be found:
 
 https://github.com/mdisec/cve-url-crawling-dataset
 
-## Installation
+## Installation - Sqlite
 
 If you have go installation (*1.24*) on your machine:
 
 ```bash
-go install github.com/vigo/cvepreserve@latest
+go install github.com/vigo/cvepreserve/cmd/cvepreserve-sqlite@latest
 ```
 
-then run `cvepreserve -h` for help or build from source:
+then run `cvepreserve-sqlite -h` for help or build from source:
 
 ```bash
 git clone git@github.com:vigo/cvepreserve.git
 cd cvepreserve/
-go build .
+go build -o cvepreserve-sqlite cmd/cvepreserve-sqlite/main.go  # for sqlite
 ```
 
-then run `./cvepreserve -h` for help.
+then run `./cvepreserve-sqlite -h` for help.
 
 ## Usage
 
@@ -40,10 +40,10 @@ curl -L -o dataset.json https://raw.githubusercontent.com/mdisec/cve-url-crawlin
 Run the executable:
 
 ```bash
-./cvepreserve          # if you are building from source, auto reads from dataset.json
+./cvepreserve-sqlite    # if you are building from source, auto reads from dataset.json
 
 # or
-cvepreserve -dataset "/path/to/dataset.json"
+cvepreserve-sqlite -dataset "/path/to/dataset.json"
 ```
 
 The result database will be saved in the directory where you run the executable.

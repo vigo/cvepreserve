@@ -27,5 +27,6 @@ go.work
 # End of https://www.toptal.com/developers/gitignore/api/go
 
 dataset.json
-cvepreserve
 *.sqlite3
+/cvepreserve-sqlite
+!.gitkeep
