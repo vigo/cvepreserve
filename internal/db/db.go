@@ -5,6 +5,7 @@ package db
 
 import (
 	"database/sql"
+	"errors"
 
 	"github.com/vigo/cvepreserve/internal/dbmodel"
 )
@@ -19,3 +20,9 @@ type Manager interface {
 	IsCompleted(id int, url string) (bool, error)
 	MarkCompleted(id int) error
 }
+
+// sentinel errors.
+var (
+	ErrValueRequired  = errors.New("value required")
+	ErrNoRowsAffected = errors.New("no row(s) affected")
+)
