@@ -94,9 +94,13 @@ curl -L -o dataset.json https://raw.githubusercontent.com/mdisec/cve-url-crawlin
 Run the executable:
 
 ```bash
+export DATABASE_NAME="cvepreserve"
+export DATABASE_URL="postgres://localhost:5432/${DATABASE_NAME}?sslmode=disable"
 ./cvepreserve-pg    # if you are building from source, auto reads from dataset.json
 
 # or
+export DATABASE_NAME="cvepreserve"
+export DATABASE_URL="postgres://localhost:5432/${DATABASE_NAME}?sslmode=disable"
 cvepreserve-pg -dataset "/path/to/dataset.json"
 ```
 
