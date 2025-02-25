@@ -1,14 +1,13 @@
 package cve
 
 import (
-	"database/sql"
 	"io"
 	"log/slog"
 	"net/http"
 	"strings"
 	"sync"
 
-	"github.com/vigo/cvepreserve/internal/db/sqlite"
+	"github.com/vigo/cvepreserve/internal/db"
 	"github.com/vigo/cvepreserve/internal/dbmodel"
 	"github.com/vigo/cvepreserve/internal/httpclient"
 	"github.com/vigo/cvepreserve/internal/wayback"
@@ -22,7 +21,7 @@ type FetchResult struct {
 }
 
 // FetchAndStore fetches URLs and saves them in the database concurrently.
-func FetchAndStore(db *sqlite.DB, cl httpclient.Doer, data <-chan Element, workers int, logger *slog.Logger) {
+func FetchAndStore(dbase db.Manager, cl httpclient.Doer, data <-chan Element, workers int, logger *slog.Logger) {
 	var wg sync.WaitGroup
 
 	fetchChan := make(chan Element, workers)
@@ -35,7 +34,7 @@ func FetchAndStore(db *sqlite.DB, cl httpclient.Doer, data <-chan Element, worke
 			defer wg.Done()
 
 			for item := range fetchChan {
-				processItem(db, cl, item, logger)
+				processItem(dbase, cl, item, logger)
 			}
 		}()
 	}
@@ -47,7 +46,7 @@ func FetchAndStore(db *sqlite.DB, cl httpclient.Doer, data <-chan Element, worke
 	wg.Wait()
 }
 
-func processItem(db *sqlite.DB, cl httpclient.Doer, item Element, logger *slog.Logger) {
+func processItem(dbase db.Manager, cl httpclient.Doer, item Element, logger *slog.Logger) {
 	var wg sync.WaitGroup
 	resultChan := make(chan *dbmodel.CVE, len(item.URLS))
 
@@ -59,7 +58,7 @@ func processItem(db *sqlite.DB, cl httpclient.Doer, item Element, logger *slog.L
 		go func() {
 			defer wg.Done()
 
-			crawled, err := isCrawled(db.DB, item.CVEID, url)
+			crawled, err := isCrawled(dbase, item.CVEID, url)
 			if err != nil {
 				logger.Error("isCrawled", "err", err)
 
@@ -114,7 +113,7 @@ func processItem(db *sqlite.DB, cl httpclient.Doer, item Element, logger *slog.L
 	}()
 
 	for model := range resultChan {
-		if err := db.Save(model); err != nil {
+		if err := dbase.Save(model); err != nil {
 			logger.Error("db.Save", "err", err, "url", model.URL)
 		}
 	}
@@ -153,10 +152,11 @@ func fetchURL(cl httpclient.Doer, url string, logger *slog.Logger) (*FetchResult
 	}, nil
 }
 
-func isCrawled(db *sql.DB, cveID, url string) (bool, error) {
+func isCrawled(dbase db.Manager, cveID, url string) (bool, error) {
 	var exists bool
 
-	err := db.QueryRow("SELECT EXISTS(SELECT 1 FROM cve_pages WHERE cve_id = ? AND url = ?)", cveID, url).Scan(&exists)
+	d := dbase.GetDB()
+	err := d.QueryRow("SELECT EXISTS(SELECT 1 FROM cve_pages WHERE cve_id = $1 AND url = $2)", cveID, url).Scan(&exists)
 	if err != nil {
 		return false, err
 	}

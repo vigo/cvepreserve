@@ -6,30 +6,14 @@ package sqlite
 import (
 	"database/sql"
 	"encoding/json"
-	"errors"
 	"fmt"
 
 	_ "github.com/mattn/go-sqlite3" // sqlite embedded
+	"github.com/vigo/cvepreserve/internal/db"
 	"github.com/vigo/cvepreserve/internal/dbmodel"
 )
 
-var _ DBManager = (*DB)(nil) // compile time proof
-
-// sentinel errors.
-var (
-	ErrValueRequired  = errors.New("value required")
-	ErrNoRowsAffected = errors.New("no row(s) affected")
-)
-
-// DBManager defines database behaviours.
-type DBManager interface {
-	InitDB() error
-	Save(model *dbmodel.CVE) error
-	FindPagesNeedingRender() (dbmodel.RenderRequiredCVES, error)
-	UpdateRenderedHTML(id int, html string) error
-	IsCompleted(id int, url string) (bool, error)
-	MarkCompleted(id int) error
-}
+var _ db.Manager = (*DB)(nil) // compile time proof
 
 // DB holds sqlite related params.
 type DB struct {
@@ -55,6 +39,11 @@ func (d *DB) InitDB() error {
 	_, err := d.DB.Exec(query)
 
 	return err
+}
+
+// GetDB returns sql.DB.
+func (d *DB) GetDB() *sql.DB {
+	return d.DB
 }
 
 // Save inserts data to db.
@@ -111,7 +100,7 @@ func (d *DB) UpdateRenderedHTML(id int, html string) error {
 
 	rowsAffected, _ := result.RowsAffected()
 	if rowsAffected == 0 {
-		return ErrNoRowsAffected
+		return db.ErrNoRowsAffected
 	}
 
 	return nil
@@ -141,7 +130,7 @@ func (d *DB) MarkCompleted(id int) error {
 
 	rowsAffected, _ := result.RowsAffected()
 	if rowsAffected == 0 {
-		return ErrNoRowsAffected
+		return db.ErrNoRowsAffected
 	}
 
 	return nil
@@ -160,7 +149,7 @@ type Option func(*DB) error
 func WithTargetSqliteFilename(s string) Option {
 	return func(d *DB) error {
 		if s == "" {
-			return fmt.Errorf("%w, target filename can not be empty string", ErrValueRequired)
+			return fmt.Errorf("%w, target filename can not be empty string", db.ErrValueRequired)
 		}
 
 		d.TargetSqliteFilename = s

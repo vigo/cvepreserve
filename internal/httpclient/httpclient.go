@@ -124,6 +124,12 @@ func New(options ...Option) (*Client, error) {
 	cl := &http.Client{
 		Transport: transport,
 		Timeout:   client.Timeout,
+		CheckRedirect: func(_ *http.Request, via []*http.Request) error {
+			if len(via) >= 20 {
+				return fmt.Errorf("stopped after %d redirects", len(via))
+			}
+			return nil
+		},
 	}
 	client.HTTPClient = cl
 
