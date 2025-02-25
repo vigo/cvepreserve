@@ -44,7 +44,7 @@ func Fetch(cl httpclient.Doer, url string) (string, error) {
 		return "", ErrSnapshotNotFound
 	}
 
-	timestamp := data[1][1] // Second row, second column
+	timestamp := data[1][1]
 	archiveURL := fmt.Sprintf("https://web.archive.org/web/%s/%s", timestamp, url)
 
 	return archiveURL, nil
