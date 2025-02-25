@@ -6,33 +6,24 @@ package wayback
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/vigo/cvepreserve/internal/httpclient"
 )
-
-// Response represents Wayback response.
-type Response struct {
-	ArchivedSnapshots struct {
-		Closest struct {
-			Status    string `json:"status"`
-			Timestamp string `json:"timestamp"`
-			URL       string `json:"url"`
-			Available bool   `json:"available"`
-		} `json:"closest"`
-	} `json:"archived_snapshots"`
-}
-
-const waybackEndpoint = "https://archive.org/wayback/available?url="
 
 // sentinel errors.
 var (
 	ErrSnapshotNotFound = errors.New("wayback snapshot not found")
 )
 
-// Fetch queries Wayback Machine for an archived version of a URL.
+const waybackCDXEndpoint = "https://web.archive.org/cdx/search/cdx?url=%s&output=json&filter=statuscode:200&limit=1&sort=timestamp"
+
+// Fetch queries Wayback Machine for the earliest archived version of a URL.
 func Fetch(cl httpclient.Doer, url string) (string, error) {
-	req, err := http.NewRequest(http.MethodGet, waybackEndpoint+url, nil)
+	requestURL := fmt.Sprintf(waybackCDXEndpoint, url)
+
+	req, err := http.NewRequest(http.MethodGet, requestURL, nil)
 	if err != nil {
 		return "", err
 	}
@@ -42,20 +33,19 @@ func Fetch(cl httpclient.Doer, url string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	defer func() { _ = resp.Body.Close() }()
 
-	defer func() {
-		_ = resp.Body.Close()
-	}()
-
-	var wbResponse Response
-
-	if err = json.NewDecoder(resp.Body).Decode(&wbResponse); err != nil {
-		return "", err
+	var data [][]string
+	if err = json.NewDecoder(resp.Body).Decode(&data); err != nil {
+		return "", fmt.Errorf("failed to decode Wayback response: %w", err)
 	}
 
-	if wbResponse.ArchivedSnapshots.Closest.Available && wbResponse.ArchivedSnapshots.Closest.Status == "200" {
-		return wbResponse.ArchivedSnapshots.Closest.URL, nil
+	if len(data) < 2 || len(data[1]) < 3 {
+		return "", ErrSnapshotNotFound
 	}
 
-	return "", ErrSnapshotNotFound
+	timestamp := data[1][1] // Second row, second column
+	archiveURL := fmt.Sprintf("https://web.archive.org/web/%s/%s", timestamp, url)
+
+	return archiveURL, nil
 }
