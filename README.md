@@ -51,6 +51,57 @@ Sqlite database name is `result.sqlite3`
 
 ---
 
+## Installation - PostgreSQL
+
+To setup your local PostgreSQL database; run:
+
+```bash
+bash scripts/init-postgresql-db.bash                         # creates `cvepreserve` database
+DATABASE_NAME="foo" bash scripts/init-postgresql-db.bash     # creates `foo` database
+```
+
+Set your environment variables according to you choices:
+
+```bash
+export DATABASE_NAME="cvepreserve"
+export DATABASE_URL="postgres://localhost:5432/${DATABASE_NAME}?sslmode=disable"
+```
+
+If you have go installation (*1.24*) on your machine:
+
+```bash
+go install github.com/vigo/cvepreserve/cmd/cvepreserve-pg@latest
+```
+
+then run `cvepreserve-pg -h` for help or build from source:
+
+```bash
+git clone git@github.com:vigo/cvepreserve.git
+cd cvepreserve/
+go build -o cvepreserve-pg cmd/cvepreserve-pg/main.go  # for postgresql
+```
+
+then run `./cvepreserve-pg -h` for help.
+
+## Usage
+
+Download dataset file to you local, `~100MB` json file.
+
+```bash
+curl -L -o dataset.json https://raw.githubusercontent.com/mdisec/cve-url-crawling-dataset/main/dataset.json
+```
+
+Run the executable:
+
+```bash
+./cvepreserve-pg    # if you are building from source, auto reads from dataset.json
+
+# or
+cvepreserve-pg -dataset "/path/to/dataset.json"
+```
+
+---
+
 ## Contribute
 
 Feel free to fix bugs, improve, add features! All PR’s are welcome!

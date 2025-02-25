@@ -18,7 +18,7 @@ var _ db.Manager = (*DB)(nil) // Compile-time check
 
 // DB holds PostgreSQL related parameters.
 type DB struct {
-	DB  *sql.DB
+	*sql.DB
 	DSN string
 }
 
@@ -140,11 +140,7 @@ type Option func(*DB) error
 func WithDSN(dsn string) Option {
 	return func(d *DB) error {
 		if dsn == "" {
-			dsn = os.Getenv("DATABASE_URL")
-		}
-
-		if dsn == "" {
-			return fmt.Errorf("%w, DSN (DATABASE_URL) cannot be empty", db.ErrValueRequired)
+			return fmt.Errorf("%w, dsn cannot be empty", db.ErrValueRequired)
 		}
 
 		d.DSN = dsn
@@ -155,19 +151,26 @@ func WithDSN(dsn string) Option {
 
 // New initializes a new PostgreSQL database instance.
 func New(options ...Option) (*DB, error) {
-	db := new(DB)
+	dbase := new(DB)
 	for _, option := range options {
-		if err := option(db); err != nil {
+		if err := option(dbase); err != nil {
 			return nil, err
 		}
 	}
 
+	if dbase.DSN == "" {
+		dbase.DSN = os.Getenv("DATABASE_URL")
+	}
+	if dbase.DSN == "" {
+		return nil, fmt.Errorf("%w, dsn cannot be empty", db.ErrValueRequired)
+	}
+
 	// Connect to PostgreSQL using DSN
-	pgDB, err := sql.Open("postgres", db.DSN)
+	pgDB, err := sql.Open("postgres", dbase.DSN)
 	if err != nil {
 		return nil, err
 	}
-	db.DB = pgDB
+	dbase.DB = pgDB
 
-	return db, nil
+	return dbase, nil
 }

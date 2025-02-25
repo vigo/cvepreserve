@@ -155,8 +155,8 @@ func fetchURL(cl httpclient.Doer, url string, logger *slog.Logger) (*FetchResult
 func isCrawled(dbase db.Manager, cveID, url string) (bool, error) {
 	var exists bool
 
-	db := dbase.GetDB()
-	err := db.QueryRow("SELECT EXISTS(SELECT 1 FROM cve_pages WHERE cve_id = ? AND url = ?)", cveID, url).Scan(&exists)
+	d := dbase.GetDB()
+	err := d.QueryRow("SELECT EXISTS(SELECT 1 FROM cve_pages WHERE cve_id = $1 AND url = $2)", cveID, url).Scan(&exists)
 	if err != nil {
 		return false, err
 	}

@@ -10,7 +10,7 @@ import (
 	"runtime"
 
 	"github.com/vigo/cvepreserve/internal/cve"
-	"github.com/vigo/cvepreserve/internal/db/sqlite"
+	"github.com/vigo/cvepreserve/internal/db/postgresql"
 	"github.com/vigo/cvepreserve/internal/httpclient"
 	"github.com/vigo/cvepreserve/internal/renderer"
 	"github.com/vigo/cvepreserve/internal/tlog"
@@ -48,9 +48,7 @@ func main() {
 		_ = f.Close()
 	}()
 
-	dbase, err := sqlite.New(
-		sqlite.WithTargetSqliteFilename("result.sqlite3"),
-	)
+	dbase, err := postgresql.New()
 	if err != nil {
 		logger.Error("instantiate db", "err", err)
 		return

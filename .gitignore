@@ -28,5 +28,6 @@ go.work
 
 dataset.json
 *.sqlite3
+.envrc
 /cvepreserve-sqlite
 !.gitkeep
