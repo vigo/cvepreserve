@@ -3,14 +3,14 @@ module github.com/vigo/cvepreserve
 go 1.24.0
 
 require (
-	github.com/chromedp/chromedp v0.13.0
+	github.com/chromedp/chromedp v0.13.2
 	github.com/lib/pq v1.10.9
 	github.com/lmittmann/tint v1.0.7
 	github.com/mattn/go-sqlite3 v1.14.24
 )
 
 require (
-	github.com/chromedp/cdproto v0.0.0-20250222051814-50c6cb17f10a // indirect
+	github.com/chromedp/cdproto v0.0.0-20250319231242-a755498943c8 // indirect
 	github.com/chromedp/sysutil v1.1.0 // indirect
 	github.com/go-json-experiment/json v0.0.0-20250213060926-925ba3f173fa // indirect
 	github.com/gobwas/httphead v0.1.0 // indirect
