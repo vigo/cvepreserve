@@ -6,7 +6,7 @@ require (
 	github.com/chromedp/chromedp v0.13.0
 	github.com/lib/pq v1.10.9
 	github.com/lmittmann/tint v1.0.7
-	github.com/mattn/go-sqlite3 v1.14.24
+	github.com/mattn/go-sqlite3 v1.14.28
 )
 
 require (
